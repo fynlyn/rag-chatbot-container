@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RAG Chat</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>RAG Chat</h1>
+    <div class="notice">
+      Tip: First run may take time as the model downloads. Index documents for best answers.
+      <a href="#" id="status-link">Check status</a>
+    </div>
+    <div class="controls">
+      <button id="ingest">Index Documents</button>
+    </div>
+    <div id="chat">
+      <div id="messages"></div>
+      <form id="form">
+        <input id="input" type="text" placeholder="Ask a question about your docs..." />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('status-link').onclick = async (e) => {
+      e.preventDefault();
+      try {
+        const r = await fetch('/status');
+        const j = await r.json();
+        alert('Model: ' + j.llm_model + '\nAvailable: ' + j.model_available + '\nVectors: ' + j.points + ' in ' + j.qdrant_collection);
+      } catch (e) { alert('Status check failed: ' + e); }
+    };
+    const messages = document.getElementById('messages');
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const ingestBtn = document.getElementById('ingest');
+
+    ingestBtn.onclick = async () => {
+      ingestBtn.disabled = true;
+      ingestBtn.textContent = 'Indexing...';
+      try {
+        const r = await fetch('/ingest/run', { method: 'POST' });
+        if (!r.ok) {
+          throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+        }
+        const j = await r.json();
+        alert('Indexed ' + (j.indexed || 0) + ' chunks');
+      } catch (e) { 
+        console.error('Ingest error:', e);
+        alert('Ingest failed: ' + e.message); 
+      }
+      ingestBtn.textContent = 'Index Documents';
+      ingestBtn.disabled = false;
+    };
+
+    function addMessage(role, text) {
+      const div = document.createElement('div');
+      div.className = 'msg ' + role;
+      div.textContent = text;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const q = input.value.trim();
+      if (!q) return;
+      input.value = '';
+      addMessage('user', q);
+
+      const div = document.createElement('div');
+      div.className = 'msg bot';
+      messages.appendChild(div);
+
+      const es = new EventSource('/chat/stream?q=' + encodeURIComponent(q));
+      es.onmessage = (ev) => {
+        div.textContent += ev.data;
+        messages.scrollTop = messages.scrollHeight;
+      };
+      es.onerror = (e) => { 
+        console.error('Stream error:', e);
+        div.textContent = div.textContent || 'Error: No response received. Check if model is available.';
+        es.close(); 
+      };
+      es.onopen = () => console.log('Stream opened');
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+{
+  "name": "Local RAG via FastAPI",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://rag:8000/chat/ask",
+        "sendBody": true,
+        "jsonParameters": true,
+        "options": {}
+      },
+      "id": "2",
+      "name": "Ask Chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Ask Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

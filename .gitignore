@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Env
+.env
+
+# Data & model caches
+/data/
+/config/*.local.*
+rag_service/.venv/
+rag_service/.mypy_cache/
+rag_service/.pytest_cache/
+
+# Python build
+*.egg-info/
+
+# OS
+.DS_Store

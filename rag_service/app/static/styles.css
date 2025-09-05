@@ -1,0 +1,20 @@
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;margin:0;padding:0;background:#0b1021;color:#e6e8f0}
+.container{max-width:900px;margin:0 auto;padding:24px}
+h1{margin:0 0 16px;font-size:22px}
+.notice{background:#1f2937;border:1px solid #374151;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:14px}
+.notice a{color:#60a5fa;text-decoration:none}
+.notice a:hover{text-decoration:underline}
+.controls{margin-bottom:12px}
+button{background:#2563eb;border:none;color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer}
+button:hover{background:#1d4ed8}
+button:disabled{background:#374151;cursor:not-allowed}
+#chat{background:#0f152e;border:1px solid #1e2650;border-radius:8px;padding:12px;min-height:60vh;display:flex;flex-direction:column}
+#messages{flex:1;overflow:auto;padding:4px 8px}
+.msg{margin:8px 0;padding:10px;border-radius:8px;max-width:80%}
+.msg.user{background:#1f2937;align-self:flex-end}
+.msg.bot{background:#111827;align-self:flex-start}
+#form{display:flex;gap:8px}
+#input{flex:1;padding:10px;border-radius:6px;border:1px solid #1e2650;background:#0b1021;color:#e6e8f0}
+.notice{background:#1e293b;border:1px solid #334155;border-radius:6px;padding:12px;margin:0 0 16px;font-size:14px}
+.notice a{color:#60a5fa;text-decoration:none}
+.notice a:hover{text-decoration:underline}
