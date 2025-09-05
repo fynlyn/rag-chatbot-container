@@ -15,6 +15,7 @@ from .llm import ollama
 from .routers import chat as chat_router
 from .routers import ingest as ingest_router
 from .routers import status as status_router
+from .routers import models as models_router
 
 app = FastAPI(title="RAG Chatbot Service")
 
@@ -29,6 +30,7 @@ app.add_middleware(
 app.include_router(ingest_router.router)
 app.include_router(chat_router.router)
 app.include_router(status_router.router)
+app.include_router(models_router.router)
 
 # Static UI
 static_dir = Path(__file__).parent / "static"

@@ -62,6 +62,36 @@ RAG_TOP_K=8 docker compose restart rag
 - GET `/chat/stream?q=...` — Server-sent events streaming answer
 - GET `/health` — service health
 
+### Model Management API
+- GET `/models/available` — list popular models available for download
+- GET `/models/installed` — list currently installed models
+- POST `/models/download` — download a model: `{"model_name": "qwen2:1.5b"}`
+- GET `/models/download/status/{model_name}` — check download progress
+- POST `/models/set-active` — set active model: `{"model_name": "phi3:mini"}`
+- DELETE `/models/remove/{model_name}` — remove an installed model
+
+## Model Management
+
+The web UI now includes a **🤖 Models** tab for easy model management:
+
+### Available Models
+- **llama3.2:1b** - Fastest, 1B parameters (~1GB)
+- **llama3.2:3b** - Balanced speed/quality, 3B parameters (~2GB) 
+- **phi3:mini** - Microsoft's efficient model, 3.8B parameters (~2.2GB)
+- **qwen2:1.5b** - Multilingual support, 1.5B parameters (~934MB)
+- **gemma2:2b** - Google's optimized model, 2B parameters (~1.6GB)
+- **llama3.1:8b** - High quality, 8B parameters (~4.9GB)
+
+### Features
+- ✅ **One-click downloads** - Browse and download models through the UI
+- ✅ **Real-time progress** - See download status and progress
+- ✅ **Model switching** - Switch between installed models instantly
+- ✅ **Model removal** - Clean up unused models to save space
+- ✅ **Background processing** - Downloads happen in background
+- ✅ **Status tracking** - Visual indicators for model states
+
+See [MODEL_MANAGEMENT.md](MODEL_MANAGEMENT.md) for detailed documentation.
+
 ## Notes on models
 
 The container starts an Ollama service. The API will auto-pull the model you set the first time you query it. To pre-pull manually on the host:

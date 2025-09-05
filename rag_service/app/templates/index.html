@@ -5,27 +5,351 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RAG Chat</title>
   <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    .model-section {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background-color: #f9f9f9;
+    }
+    .model-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 15px;
+      margin-top: 10px;
+    }
+    .model-card {
+      padding: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background-color: white;
+    }
+    .model-card.installed {
+      border-color: #4CAF50;
+      background-color: #f0f8f0;
+    }
+    .model-card.downloading {
+      border-color: #ff9800;
+      background-color: #fff8f0;
+    }
+    .model-name {
+      font-weight: bold;
+      font-size: 1.1em;
+      color: #333;
+    }
+    .model-info {
+      font-size: 0.9em;
+      color: #666;
+      margin: 5px 0;
+    }
+    .model-description {
+      font-size: 0.85em;
+      color: #777;
+      margin: 8px 0;
+    }
+    .model-actions {
+      margin-top: 10px;
+    }
+    .btn {
+      padding: 6px 12px;
+      margin-right: 8px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9em;
+    }
+    .btn-primary { background-color: #007bff; color: white; }
+    .btn-success { background-color: #28a745; color: white; }
+    .btn-warning { background-color: #ffc107; color: black; }
+    .btn-danger { background-color: #dc3545; color: white; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .status-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      font-weight: bold;
+    }
+    .status-available { background-color: #e9ecef; color: #495057; }
+    .status-installed { background-color: #d4edda; color: #155724; }
+    .status-downloading { background-color: #fff3cd; color: #856404; }
+    .status-error { background-color: #f8d7da; color: #721c24; }
+    .progress-text {
+      font-size: 0.8em;
+      color: #666;
+      margin-top: 5px;
+    }
+    .tab-container {
+      margin-bottom: 20px;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid #ddd;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      background-color: #f8f9fa;
+      margin-right: 2px;
+      border-radius: 6px 6px 0 0;
+    }
+    .tab.active {
+      border-bottom-color: #007bff;
+      background-color: white;
+      font-weight: bold;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .current-model {
+      font-weight: bold;
+      color: #007bff;
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: #e9f4ff;
+      border-radius: 6px;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <h1>RAG Chat</h1>
-    <div class="notice">
-      Tip: First run may take time as the model downloads. Index documents for best answers.
-      <a href="#" id="status-link">Check status</a>
-    </div>
-    <div class="controls">
-      <button id="ingest">Index Documents</button>
-    </div>
-    <div id="chat">
-      <div id="messages"></div>
-      <form id="form">
-        <input id="input" type="text" placeholder="Ask a question about your docs..." />
-        <button type="submit">Send</button>
-      </form>
+    
+    <div class="tab-container">
+      <div class="tabs">
+        <div class="tab active" onclick="showTab('chat')">💬 Chat</div>
+        <div class="tab" onclick="showTab('models')">🤖 Models</div>
+      </div>
+      
+      <div id="chat-tab" class="tab-content active">
+        <div class="notice">
+          Tip: First run may take time as the model downloads. Index documents for best answers.
+          <a href="#" id="status-link">Check status</a>
+        </div>
+        <div class="controls">
+          <button id="ingest">Index Documents</button>
+        </div>
+        <div id="chat">
+          <div id="messages"></div>
+          <form id="form">
+            <input id="input" type="text" placeholder="Ask a question about your docs..." />
+            <button type="submit">Send</button>
+          </form>
+        </div>
+      </div>
+      
+      <div id="models-tab" class="tab-content">
+        <div class="current-model">
+          Current Model: <span id="current-model">Loading...</span>
+        </div>
+        
+        <div class="model-section">
+          <h3>📦 Available Models</h3>
+          <p>Popular models optimized for RAG applications. Click download to install.</p>
+          <div id="available-models" class="model-grid">
+            Loading models...
+          </div>
+        </div>
+        
+        <div class="model-section">
+          <h3>💾 Installed Models</h3>
+          <p>Models currently installed and ready to use.</p>
+          <div id="installed-models" class="model-grid">
+            Loading models...
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
+    // Tab management
+    function showTab(tabName) {
+      // Hide all tab contents
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      // Remove active class from all tabs
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      // Show selected tab content
+      document.getElementById(tabName + '-tab').classList.add('active');
+      // Add active class to selected tab
+      event.target.classList.add('active');
+      
+      // Load models when switching to models tab
+      if (tabName === 'models') {
+        loadModels();
+      }
+    }
+
+    // Model management functions
+    async function loadModels() {
+      try {
+        // Load current model
+        const statusResponse = await fetch('/status');
+        const status = await statusResponse.json();
+        document.getElementById('current-model').textContent = status.llm_model;
+        
+        // Load available models
+        const availableResponse = await fetch('/models/available');
+        const availableModels = await availableResponse.json();
+        renderAvailableModels(availableModels);
+        
+        // Load installed models
+        const installedResponse = await fetch('/models/installed');
+        const installedModels = await installedResponse.json();
+        renderInstalledModels(installedModels);
+        
+      } catch (error) {
+        console.error('Error loading models:', error);
+      }
+    }
+    
+    function renderAvailableModels(models) {
+      const container = document.getElementById('available-models');
+      container.innerHTML = models.map(model => `
+        <div class="model-card ${model.status}">
+          <div class="model-name">${model.name}</div>
+          <div class="model-info">
+            <span class="status-badge status-${model.status}">${model.status.toUpperCase()}</span>
+            ${model.parameter_size ? `• ${model.parameter_size}` : ''}
+            ${model.size ? `• ${model.size}` : ''}
+          </div>
+          <div class="model-description">${model.description || ''}</div>
+          <div class="model-actions">
+            ${model.status === 'available' ? 
+              `<button class="btn btn-primary" onclick="downloadModel('${model.name}')">Download</button>` :
+              model.status === 'installed' ? 
+                `<button class="btn btn-success" onclick="setActiveModel('${model.name}')">Use This Model</button>` :
+                model.status === 'downloading' ?
+                  `<button class="btn btn-warning" disabled>Downloading...</button>` :
+                  ''
+            }
+          </div>
+          ${model.status === 'downloading' ? '<div class="progress-text" id="progress-' + model.name.replace(/[^a-zA-Z0-9]/g, '_') + '">Downloading...</div>' : ''}
+        </div>
+      `).join('');
+    }
+    
+    function renderInstalledModels(models) {
+      const container = document.getElementById('installed-models');
+      if (models.length === 0) {
+        container.innerHTML = '<p>No models installed yet. Download some models above.</p>';
+        return;
+      }
+      
+      container.innerHTML = models.map(model => `
+        <div class="model-card installed">
+          <div class="model-name">${model.name}</div>
+          <div class="model-info">
+            <span class="status-badge status-installed">INSTALLED</span>
+            ${model.parameter_size ? `• ${model.parameter_size}` : ''}
+            ${model.size ? `• ${model.size}` : ''}
+          </div>
+          <div class="model-actions">
+            <button class="btn btn-success" onclick="setActiveModel('${model.name}')">Use This Model</button>
+            <button class="btn btn-danger" onclick="removeModel('${model.name}')">Remove</button>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    async function downloadModel(modelName) {
+      try {
+        const response = await fetch('/models/download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model_name: modelName })
+        });
+        
+        const result = await response.json();
+        alert(result.message);
+        
+        // Start polling for download status
+        pollDownloadStatus(modelName);
+        loadModels(); // Refresh the UI
+        
+      } catch (error) {
+        console.error('Error downloading model:', error);
+        alert('Failed to start download: ' + error.message);
+      }
+    }
+    
+    async function pollDownloadStatus(modelName) {
+      const progressElement = document.getElementById('progress-' + modelName.replace(/[^a-zA-Z0-9]/g, '_'));
+      
+      const checkStatus = async () => {
+        try {
+          const response = await fetch(`/models/download/status/${modelName}`);
+          const status = await response.json();
+          
+          if (progressElement) {
+            progressElement.textContent = status.progress || 'Downloading...';
+          }
+          
+          if (status.status === 'completed') {
+            alert(`Model ${modelName} downloaded successfully!`);
+            loadModels(); // Refresh the UI
+          } else if (status.status === 'error') {
+            alert(`Download failed: ${status.error}`);
+            loadModels(); // Refresh the UI
+          } else if (status.status === 'downloading') {
+            setTimeout(checkStatus, 2000); // Check again in 2 seconds
+          }
+        } catch (error) {
+          console.error('Error checking download status:', error);
+        }
+      };
+      
+      checkStatus();
+    }
+    
+    async function setActiveModel(modelName) {
+      try {
+        const response = await fetch('/models/set-active', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model_name: modelName })
+        });
+        
+        const result = await response.json();
+        alert(result.message);
+        loadModels(); // Refresh the UI
+        
+      } catch (error) {
+        console.error('Error setting active model:', error);
+        alert('Failed to set active model: ' + error.message);
+      }
+    }
+    
+    async function removeModel(modelName) {
+      if (!confirm(`Are you sure you want to remove ${modelName}?`)) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/models/remove/${modelName}`, {
+          method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        alert(result.message);
+        loadModels(); // Refresh the UI
+        
+      } catch (error) {
+        console.error('Error removing model:', error);
+        alert('Failed to remove model: ' + error.message);
+      }
+    }
+
+    // Original chat functionality
     document.getElementById('status-link').onclick = async (e) => {
       e.preventDefault();
       try {
@@ -34,6 +358,7 @@
         alert('Model: ' + j.llm_model + '\nAvailable: ' + j.model_available + '\nVectors: ' + j.points + ' in ' + j.qdrant_collection);
       } catch (e) { alert('Status check failed: ' + e); }
     };
+    
     const messages = document.getElementById('messages');
     const form = document.getElementById('form');
     const input = document.getElementById('input');
