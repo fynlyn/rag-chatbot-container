@@ -114,6 +114,31 @@
       background-color: #e9f4ff;
       border-radius: 6px;
     }
+    .model-tags {
+      margin: 5px 0;
+    }
+    .tag {
+      background-color: #e3f2fd;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.8em;
+      margin-right: 4px;
+      display: inline-block;
+      margin-bottom: 2px;
+    }
+    .search-section {
+      background-color: #f8f9fa;
+      border: 2px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    #search-input {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -149,8 +174,21 @@
         </div>
         
         <div class="model-section">
-          <h3>📦 Available Models</h3>
-          <p>Popular models optimized for RAG applications. Click download to install.</p>
+          <h3>� Search Models</h3>
+          <p>Search the Ollama model library for any model (e.g., "DeepSeek R", "codellama", "mistral").</p>
+          <div style="margin-bottom: 15px;">
+            <input type="text" id="search-input" placeholder="Search for models..." style="padding: 8px; width: 300px; margin-right: 10px;">
+            <button class="btn btn-primary" onclick="searchModels()">Search</button>
+            <button class="btn" onclick="clearSearch()">Clear</button>
+          </div>
+          <div id="search-results" class="model-grid" style="display: none;">
+            <!-- Search results will be populated here -->
+          </div>
+        </div>
+        
+        <div class="model-section">
+          <h3>📦 Popular Models</h3>
+          <p>Curated models optimized for RAG applications.</p>
           <div id="available-models" class="model-grid">
             Loading models...
           </div>
@@ -188,6 +226,90 @@
         loadModels();
       }
     }
+
+    // Model search functions
+    async function searchModels() {
+      const query = document.getElementById('search-input').value.trim();
+      if (!query) {
+        alert('Please enter a search query');
+        return;
+      }
+      
+      const searchResults = document.getElementById('search-results');
+      searchResults.style.display = 'block';
+      searchResults.innerHTML = '<p>Searching...</p>';
+      
+      try {
+        const response = await fetch(`/models/search?q=${encodeURIComponent(query)}&limit=12`);
+        const models = await response.json();
+        
+        if (models.length === 0) {
+          searchResults.innerHTML = '<p>No models found for your search query.</p>';
+          return;
+        }
+        
+        renderSearchResults(models);
+        
+      } catch (error) {
+        console.error('Search error:', error);
+        searchResults.innerHTML = '<p>Search failed. Please try again.</p>';
+      }
+    }
+    
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('search-results').style.display = 'none';
+    }
+    
+    function renderSearchResults(models) {
+      const container = document.getElementById('search-results');
+      container.innerHTML = `
+        <div style="margin-bottom: 15px; padding: 10px; background-color: #e9f7ef; border-radius: 6px;">
+          <strong>Search Results (${models.length} found)</strong>
+        </div>
+        ${models.map(model => `
+          <div class="model-card ${model.status}">
+            <div class="model-name">${model.name}</div>
+            <div class="model-info">
+              <span class="status-badge status-${model.status}">${model.status.toUpperCase()}</span>
+              ${model.parameter_size ? `• ${model.parameter_size}` : ''}
+              ${model.size ? `• ${model.size}` : ''}
+              ${model.is_official ? '• Official' : ''}
+              ${model.pulls ? `• ${model.pulls} pulls` : ''}
+            </div>
+            ${model.tags && model.tags.length > 0 ? 
+              `<div class="model-tags" style="margin: 5px 0;">
+                 ${model.tags.map(tag => `<span class="tag" style="background-color: #e3f2fd; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; margin-right: 4px;">${tag}</span>`).join('')}
+               </div>` : ''
+            }
+            <div class="model-description">${model.description || 'No description available'}</div>
+            <div class="model-actions">
+              ${model.status === 'available' ? 
+                `<button class="btn btn-primary" onclick="downloadModel('${model.name}')">Download</button>` :
+                model.status === 'installed' ? 
+                  `<button class="btn btn-success" onclick="setActiveModel('${model.name}')">Use This Model</button>` :
+                  model.status === 'downloading' ?
+                    `<button class="btn btn-warning" disabled>Downloading...</button>` :
+                    ''
+              }
+            </div>
+            ${model.status === 'downloading' ? '<div class="progress-text" id="progress-' + model.name.replace(/[^a-zA-Z0-9]/g, '_') + '">Downloading...</div>' : ''}
+          </div>
+        `).join('')}
+      `;
+    }
+    
+    // Enhanced search with Enter key support
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            searchModels();
+          }
+        });
+      }
+    });
 
     // Model management functions
     async function loadModels() {
